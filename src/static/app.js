@@ -37,7 +37,11 @@ document.addEventListener("DOMContentLoaded", () => {
           ${Array.isArray(details.participants) &&
           details.participants.length
             ? `<ul class="participants-list">${details.participants
-                .map((email) => `<li>${escapeHtml(email)}</li>`)
+                .map((email) => `<li><span class="participant-email">${escapeHtml(
+                  email
+                )}</span> <button class="delete-btn" data-activity="${escapeHtml(
+                  name
+                )}" data-email="${escapeHtml(email)}" title="Unregister">🗑️</button></li>`)
                 .join("")}</ul>`
             : `<p class="participants-list">No participants yet.</p>`}
         </div>
@@ -117,6 +121,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }[m])
     );
   }
+
+  // Handle participant delete/unregister clicks (event delegation)
+  activitiesList.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".delete-btn");
+    if (!btn) return;
+    const activity = btn.dataset.activity;
+    const email = btn.dataset.email;
+    if (!activity || !email) return;
+    if (!confirm(`Unregister ${email} from ${activity}?`)) return;
+
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(
+          email
+        )}`,
+        { method: "DELETE" }
+      );
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.detail || result.message || "Unregister failed");
+      showMessage(result.message || "Unregistered successfully", "success");
+      await fetchActivities();
+    } catch (error) {
+      showMessage(error.message, "error");
+    }
+  });
 
   // Initialize app
   fetchActivities();
